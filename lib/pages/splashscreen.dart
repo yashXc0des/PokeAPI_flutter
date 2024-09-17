@@ -1,30 +1,68 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:video_player/video_player.dart';
 
-import 'package:pokeapi_flutter/pages/homepage.dart';
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
+class VideoSplashScreen extends StatefulWidget {
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  _VideoSplashScreenState createState() => _VideoSplashScreenState();
 }
-class _SplashScreenState extends State<SplashScreen> {
+
+class _VideoSplashScreenState extends State<VideoSplashScreen> {
+  late VideoPlayerController _controller;
+  bool _isVideoInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const Homepage()),
-      );
+
+    // Initialize the video player controller
+    _controller = VideoPlayerController.asset('assets/splash_video.mp4')
+      ..initialize().then((_) {
+        // Check if the video is initialized, and start playing the video
+        setState(() {
+          _isVideoInitialized = true;
+          _controller.play();
+        });
+      }).catchError((error) {
+        print("Error initializing video: $error");
+      });
+
+    // Listen for when the video ends and navigate to the next screen
+    _controller.addListener(() {
+      if (_controller.value.isInitialized &&
+          _controller.value.position == _controller.value.duration) {
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => HomeScreen()));
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the video player controller when the widget is removed
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(child: Image.asset("assets/images/img.png")),
+      body: Center(
+        child: _isVideoInitialized
+            ? AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: VideoPlayer(_controller),
+        )
+            : CircularProgressIndicator(), // Show loading until the video initializes
+      ),
     );
   }
 }
 
-
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(child: Text('Home Screen')),
+    );
+  }
+}
